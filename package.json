@@ -1,0 +1,13 @@
+{
+  "name": "get-bible",
+  "version": "0.0.0",
+  "description": "A simple webcrawler written in JavaScript to download the Romanian Bible",
+  "main": "GetBible.js",
+  "author": "Andrei",
+  "license": "MIT",
+  "dependencies": {
+    "cheerio": "^0.19.0",
+    "url-parse": "^1.0.5",
+    "request": "^2.65.0"
+  }
+}
