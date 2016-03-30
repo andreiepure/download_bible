@@ -1,19 +1,6 @@
- // Script to download the Orthodox Bible
+// Script pentru a descarca Sfanta Scriptura de pe www.biblia-bartolomeu.ro
 
-var request = require('request');
-var cheerio = require('cheerio');
-var URL = require('url-parse');
-
-var sep = "-";
-var siteRoot = "http://www.biblia-bartolomeu.ro/";
-var bibleRoot = siteRoot + "index-D.php?id=";
-
-var chapterName = "NT-mt";
-var gospelRoot = bibleRoot + chapterName;
-var firstChaper = 5;
-var lastChapter = 5;
-
-// Formats the number for the URL form to have 2 digits
+// Formateaza numarul ca string si daca e cifra pune 0 inainte
 function formatNumber(number)
 {
     if (number <= 0)
@@ -26,6 +13,87 @@ function formatNumber(number)
     }
     return "" + number;
 }
+
+// Trebuie sa ii dau ca parametru si o functie callback, fiindca apelul este asincron
+function requestText(url)
+{
+	request(url, function(error, response, body) {
+		if (error) {
+			console.log("Error: " + error);
+			return;
+		}
+
+		if (response.statusCode == 200) {
+			var $ = cheerio.load(body);
+
+			var title = $('body>div');
+			console.log(title.html());
+			console.log(title.text());
+
+			// fiecare rand are doua celule: prescurtarea si numele cu legatura
+			var rows = $('body>table>tr');
+			// rows[0].children[0].children[0].data - Fc
+			// rows[0].children[1].children[0].attribs.href - "?id=VT-Fc"
+			// rows[0].children[1].children[0].attribs.onclick - "javascript:parent.frames['D'].location='index-D.php?id=VT-Fc&a=obs';"
+			// rows[0].children[1].children[0].attribs.onclick.split('location=')[1].split('&')[0] - "'index-D.php?id=VT-Fc"
+			// rows[0].children[1].children[0].children[0].data - Facerea
+		}
+	});
+}
+
+// Asta poate fi folosit cu URL catre un verset sau descrierea unui capitol
+// Momentan logheaza textul versetului
+// Exemplu descriere: http://www.biblia-bartolomeu.ro/index-D.php?id=NT-Mt-05
+// Exemplu verset: http://www.biblia-bartolomeu.ro/index-D.php?id=NT-Mt-05-03
+// TODO: folosit capitol intreg
+// Exemplu capitol intreg: http://www.biblia-bartolomeu.ro/index-C.php?id=NT-Mt-05
+// - TODO extras descrierea capitolului
+// - TODO pentru fiecare verset
+// ---> extras textul, marcat adnotarea cumva, cu coif ^
+// ---> extras legaturile pentru adnotare, { 'a':url }
+// ---> extras legaturile pentru referinte
+function requestTableTrTdText(url)
+{
+	request(url, function(error, response, body) {
+		if (error) {
+			console.log("Error: " + error);
+			return;
+		}
+
+		if (response.statusCode == 200) {
+			var $ = cheerio.load(body);
+			var chapter = $('body>table>tr>td>center').text();
+			var text = $('body>table>tr>td').text().split(chapter)[1];
+			console.log(text);
+		}
+	});
+}
+
+var request = require('request');
+var cheerio = require('cheerio');
+var URL = require('url-parse');
+
+/*
+var sep = "-";
+var siteRoot = "http://www.biblia-bartolomeu.ro/";
+var bibleRoot = siteRoot + "index-D.php?id=";
+
+var chapterName = "NT-mt";
+var gospelRoot = bibleRoot + chapterName;
+var firstChaper = 5;
+var lastChapter = 5;
+
+for (var chapter = firstChaper; chapter <= lastChapter; chapter++)
+{
+    var chapterRoot = gospelRoot + sep + formatNumber(chapter);
+	requestText(chapterRoot);
+
+	var verseNumber = 3;
+	var versetRoot = chapterRoot + sep + formatNumber(verseNumber);
+	requestText(versetRoot);
+}
+
+*/
 
 // 1. Get the table of contents (books) in a structure
 // VT http://www.biblia-bartolomeu.ro/index-C.php?id=VT
@@ -41,29 +109,13 @@ function formatNumber(number)
 // Each addnotation will be an object {ParentBook: Facerea, ParentChapter:1, Letter: a, Text: ""} // for V1 skips links inside the text
 // Each trimitere will be an object { ParentBook: Facerea, ParentChapter:1, ParentVerset:1, ToBook: Isaia, ToChapter: 57, ToVerset:15}
 
-function requestText(url)
-{
-	request(url, function(error, response, body) {
-		if (error) {
-			console.log("Error: " + error);
-			return;
-		}
+//var sections = [ "VT", "NT" ]
+var sections = [ "VT"]
+var siteRoot = "http://www.biblia-bartolomeu.ro/";
+var sectionRoot = siteRoot + "index-C.php?id=";
 
-		if (response.statusCode == 200) {
-			var $ = cheerio.load(body);
-			var chapter = $('body>table>tr>td>center').text();
-			description = $('body>table>tr>td').text().split(chapter)[1];
-			console.log(description);
-		}
-	});
-}
-
-for (var chapter = firstChaper; chapter <= lastChapter; chapter++)
-{
-    var chapterRoot = gospelRoot + sep + formatNumber(chapter);
+for (var i = 0; i < sections.length; i++) {
+    var chapterRoot = sectionRoot + sections[i];
+	console.log(chapterRoot);
 	requestText(chapterRoot);
-
-	var verseNumber = 3;
-	var versetRoot = chapterRoot + sep + formatNumber(verseNumber);
-	requestText(versetRoot);
 }
