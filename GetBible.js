@@ -1,5 +1,12 @@
 // Script pentru a descarca Sfanta Scriptura de pe www.biblia-bartolomeu.ro
 
+function Book(shortName, longName, relativePath) {
+	this.Parent = relativePath.indexOf("VT") != -1 ? "VT" : "NT";
+	this.ShortName = shortName;
+	this.LongName = longName;
+	this.RelativePath = relativePath;
+}
+
 // Formateaza numarul ca string si daca e cifra pune 0 inainte
 function formatNumber(number)
 {
@@ -32,6 +39,17 @@ function requestText(url)
 
 			// fiecare rand are doua celule: prescurtarea si numele cu legatura
 			var rows = $('body>table>tr');
+			for (var i = 0; i < rows.length; i++) {
+				var row = rows[i];
+
+				var link = row.children[1].children[0];
+				var shortName = row.children[0].children[0].data;
+				var longName = link.children[0].data;
+				var relativePath = link.attribs.href;
+
+				console.log(shortName +"," + longName+","+relativePath);
+
+			}
 			// rows[0].children[0].children[0].data - Fc
 			// rows[0].children[1].children[0].attribs.href - "?id=VT-Fc"
 			// rows[0].children[1].children[0].attribs.onclick - "javascript:parent.frames['D'].location='index-D.php?id=VT-Fc&a=obs';"
@@ -72,6 +90,9 @@ function requestTableTrTdText(url)
 var request = require('request');
 var cheerio = require('cheerio');
 var URL = require('url-parse');
+var sqlite3 = require('sqlite3').verbose();
+var fs = require('fs');
+var stream = fs.createWriteStream("test_output.txt");
 
 /*
 var sep = "-";
@@ -109,8 +130,7 @@ for (var chapter = firstChaper; chapter <= lastChapter; chapter++)
 // Each addnotation will be an object {ParentBook: Facerea, ParentChapter:1, Letter: a, Text: ""} // for V1 skips links inside the text
 // Each trimitere will be an object { ParentBook: Facerea, ParentChapter:1, ParentVerset:1, ToBook: Isaia, ToChapter: 57, ToVerset:15}
 
-//var sections = [ "VT", "NT" ]
-var sections = [ "VT"]
+var sections = [ "VT", "NT" ]
 var siteRoot = "http://www.biblia-bartolomeu.ro/";
 var sectionRoot = siteRoot + "index-C.php?id=";
 
