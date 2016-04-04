@@ -12,45 +12,43 @@ function Book(shortName, longName, relativePath) {
 // db.run("CREATE TABLE Books (test_id INTEGER NOT NULL, s_name TEXT NOT NULL, l_name TEXT NOT NULL, path TEXT NOT NULL)");
 function requestText(db, url)
 {
-	request(url, function(error, response, body) {
-		if (error) {
-			console.log("Error: " + error);
-			return;
+	var res = request('GET', url);
+	var body;
+	try {
+		body = res.getBody();
+	} catch (err) {
+		console.log("Error: " + error);
+		return;
+	}
+
+	var $ = cheerio.load(body);
+
+	var title = $('body>div');
+
+	// fiecare rand are doua celule: prescurtarea si numele cu legatura
+	var rows = $('body>table>tr');
+	var db = new sqlite3.Database(file);
+	db.serialize(function() {
+		//var stmt = db.prepare("INSERT INTO Books VALUES (?, ?, ?, ?)");
+		for (var i = 0; i < rows.length; i++) {
+			var row = rows[i];
+			var link = row.children[1].children[0];
+
+			var shortName = row.children[0].children[0].data;
+			var longName = link.children[0].data;
+			var relativePath = link.attribs.href;
+
+			var currentBook = new Book(shortName, longName, relativePath);
+			//stmt.run(currentBook.bookId, currentBook.shortName, currentBook.longName, currentBook.relativePath);
+			console.log(currentBook.bookId +" "+ currentBook.shortName +" "+ currentBook.longName +" "+ currentBook.relativePath);
+
 		}
-
-		if (response.statusCode == 200) {
-			var $ = cheerio.load(body);
-
-			var title = $('body>div');
-
-			// fiecare rand are doua celule: prescurtarea si numele cu legatura
-			var rows = $('body>table>tr');
-			var db = new sqlite3.Database(file);
-			db.serialize(function() {
-				//var stmt = db.prepare("INSERT INTO Books VALUES (?, ?, ?, ?)");
-				for (var i = 0; i < rows.length; i++) {
-					var row = rows[i];
-					var link = row.children[1].children[0];
-
-					var shortName = row.children[0].children[0].data;
-					var longName = link.children[0].data;
-					var relativePath = link.attribs.href;
-
-					var currentBook = new Book(shortName, longName, relativePath);
-					//stmt.run(currentBook.bookId, currentBook.shortName, currentBook.longName, currentBook.relativePath);
-					console.log(currentBook.bookId +" "+ currentBook.shortName +" "+ currentBook.longName +" "+ currentBook.relativePath);
-
-				}
-				//stmt.finalize();
-			});
-			db.close();
-		}
+		//stmt.finalize();
 	});
+	db.close();
 }
 
-
-
-var request = require('request');
+var request = require('sync-request');
 var cheerio = require('cheerio');
 var URL = require('url-parse');
 var sqlite3 = require('sqlite3').verbose();
