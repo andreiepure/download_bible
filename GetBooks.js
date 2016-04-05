@@ -5,9 +5,6 @@ function Book(shortName, longName, relativePath) {
 	this.relativePath = relativePath;
 }
 
-// TODO Trebuie sa STERG tabela Books
-// TODO Trebuie sa folosesc sync-request ca sa nu fie probleme la inserare
-
 // Trebuie sa ii dau ca parametru si o functie callback, fiindca apelul este asincron
 // db.run("CREATE TABLE Books (test_id INTEGER NOT NULL, s_name TEXT NOT NULL, l_name TEXT NOT NULL, path TEXT NOT NULL)");
 function requestText(db, url)
@@ -17,7 +14,7 @@ function requestText(db, url)
 	try {
 		body = res.getBody();
 	} catch (err) {
-		console.log("Error: " + error);
+		console.log("Error for URL " + url + " : " + error);
 		return;
 	}
 
@@ -27,9 +24,10 @@ function requestText(db, url)
 
 	// fiecare rand are doua celule: prescurtarea si numele cu legatura
 	var rows = $('body>table>tr');
-	var db = new sqlite3.Database(file);
+	var db = new sqlite3.cached.Database(file);
+
 	db.serialize(function() {
-		//var stmt = db.prepare("INSERT INTO Books VALUES (?, ?, ?, ?)");
+		var stmt = db.prepare("INSERT INTO Books VALUES (?, ?, ?, ?)");
 		for (var i = 0; i < rows.length; i++) {
 			var row = rows[i];
 			var link = row.children[1].children[0];
@@ -39,13 +37,46 @@ function requestText(db, url)
 			var relativePath = link.attribs.href;
 
 			var currentBook = new Book(shortName, longName, relativePath);
-			//stmt.run(currentBook.bookId, currentBook.shortName, currentBook.longName, currentBook.relativePath);
-			console.log(currentBook.bookId +" "+ currentBook.shortName +" "+ currentBook.longName +" "+ currentBook.relativePath);
+			var repeat = false;
+			do {
+				try {
+
+					console.log("Will get data for " +
+						currentBook.bookId +" "+
+						currentBook.shortName +" "+
+						currentBook.longName +" "+
+						currentBook.relativePath);
+
+					var stmt = db.prepare("INSERT INTO Books VALUES (?, ?, ?, ?)");
+					stmt.run(currentBook.bookId, currentBook.shortName, currentBook.longName, currentBook.relativePath);
+					repeat = false;
+
+					console.log("Got data for " +
+						currentBook.bookId +" "+
+						currentBook.shortName +" "+
+						currentBook.longName +" "+
+						currentBook.relativePath);
+
+				} catch (er) {
+					console.log("Caught error " + er + " for " +
+						currentBook.bookId +" "+
+						currentBook.shortName +" "+
+						currentBook.longName +" "+
+						currentBook.relativePath);
+					repeat = true;
+				}
+			} while (repeat);
+
+			console.log("Exited the while loop for " +
+				currentBook.bookId +" "+
+				currentBook.shortName +" "+
+				currentBook.longName +" "+
+				currentBook.relativePath);
 
 		}
-		//stmt.finalize();
+		stmt.finalize();
+
 	});
-	db.close();
 }
 
 var request = require('sync-request');
@@ -72,4 +103,5 @@ for (var i = 0; i < sections.length; i++) {
 	requestText(file, chapterRoot);
 }
 
-
+//var db = new sqlite3.Database(file);
+//db.close();
