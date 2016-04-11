@@ -24,59 +24,43 @@ function requestText(db, url)
 
 	// fiecare rand are doua celule: prescurtarea si numele cu legatura
 	var rows = $('body>table>tr');
-	var db = new sqlite3.cached.Database(file);
 
-	db.serialize(function() {
-		var stmt = db.prepare("INSERT INTO Books VALUES (?, ?, ?, ?)");
-		for (var i = 0; i < rows.length; i++) {
-			var row = rows[i];
-			var link = row.children[1].children[0];
+	for (var i = 0; i < rows.length; i++) {
+		var row = rows[i];
+		var link = row.children[1].children[0];
 
-			var shortName = row.children[0].children[0].data;
-			var longName = link.children[0].data;
-			var relativePath = link.attribs.href;
+		var shortName = row.children[0].children[0].data;
+		var longName = link.children[0].data;
+		var relativePath = link.attribs.href;
 
-			var currentBook = new Book(shortName, longName, relativePath);
-			var repeat = false;
-			do {
-				try {
+		var currentBook = new Book(shortName, longName, relativePath);
+		var repeat = false;
+		do {
+			try {
 
-					console.log("Will get data for " +
-						currentBook.bookId +" "+
-						currentBook.shortName +" "+
-						currentBook.longName +" "+
-						currentBook.relativePath);
+				var db = new sqlite3.cached.Database(file);
+				db.serialize(function() {
 
 					var stmt = db.prepare("INSERT INTO Books VALUES (?, ?, ?, ?)");
 					stmt.run(currentBook.bookId, currentBook.shortName, currentBook.longName, currentBook.relativePath);
-					repeat = false;
+					stmt.finalize();
 
-					console.log("Got data for " +
+					console.log("Inserted data for " +
 						currentBook.bookId +" "+
 						currentBook.shortName +" "+
 						currentBook.longName +" "+
 						currentBook.relativePath);
-
-				} catch (er) {
-					console.log("Caught error " + er + " for " +
-						currentBook.bookId +" "+
-						currentBook.shortName +" "+
-						currentBook.longName +" "+
-						currentBook.relativePath);
-					repeat = true;
-				}
-			} while (repeat);
-
-			console.log("Exited the while loop for " +
-				currentBook.bookId +" "+
-				currentBook.shortName +" "+
-				currentBook.longName +" "+
-				currentBook.relativePath);
-
-		}
-		stmt.finalize();
-
-	});
+				});
+			} catch (er) {
+				console.log("Caught error " + er + " for " +
+					currentBook.bookId +" "+
+					currentBook.shortName +" "+
+					currentBook.longName +" "+
+					currentBook.relativePath);
+				repeat = true;
+			}
+		} while (repeat);
+	}
 }
 
 var request = require('sync-request');
@@ -93,7 +77,6 @@ if(!exists) {
 	return;
 }
 
-
 var sections = [ "VT", "NT" ]
 var siteRoot = "http://www.biblia-bartolomeu.ro/";
 var sectionRoot = siteRoot + "index-C.php?id=";
@@ -102,6 +85,3 @@ for (var i = 0; i < sections.length; i++) {
     var chapterRoot = sectionRoot + sections[i];
 	requestText(file, chapterRoot);
 }
-
-//var db = new sqlite3.Database(file);
-//db.close();
