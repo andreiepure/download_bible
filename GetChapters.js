@@ -33,7 +33,7 @@ db.serialize(function() {
 			currentBook.longName +" "+
 			currentBook.relativePath + " " + currentBook.url);
 		books.push(currentBook);
-		if (currentBook.bookId != 54)
+		if (currentBook.bookId < 54)
 		{
 			return;
 		}
@@ -59,7 +59,7 @@ db.serialize(function() {
 			var row = rows[i];
 			var link = row.children[1].children[0];
 
-			var shortName = row.children[0].children[0].data;
+			var shortName = $(row.children[0]).text();
 			var longName = link.children[0].data;
 			var relativePath = link.attribs.href;
 
