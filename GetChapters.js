@@ -33,7 +33,9 @@ db.serialize(function() {
 			currentBook.longName +" "+
 			currentBook.relativePath + " " + currentBook.url);
 		books.push(currentBook);
-		if (currentBook.bookId < 54)
+
+		var debug_firstBook_in_newTestament = 54;
+		if (currentBook.bookId >= debug_firstBook_in_newTestament)
 		{
 			return;
 		}
