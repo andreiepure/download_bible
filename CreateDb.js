@@ -14,7 +14,7 @@ db.serialize(function() {
 	if(!exists) {
 		db.run("CREATE TABLE Testaments (s_name CHAR(15) NOT NULL, l_name TEXT NOT NULL, path TEXT NOT NULL)");
 		db.run("CREATE TABLE Books (test_id INTEGER NOT NULL, s_name TEXT NOT NULL, l_name TEXT NOT NULL, path TEXT NOT NULL)");
-		db.run("CREATE TABLE Chapters (book_id INTEGER NOT NULL, number INT NOT NULL, desc TEXT NOT NULL, path TEXT NOT NULL)");
+		db.run("CREATE TABLE Chapters (book_id INTEGER NOT NULL, number INT NOT NULL, title TEXT NOT NULL, path TEXT NOT NULL)");
 		db.run("CREATE TABLE Versets (chap_id INTEGER NOT NULL, number INT NOT NULL, text TEXT NOT NULL, path TEXT NOT NULL)");
 		db.run("CREATE TABLE Notes (vers_id INTEGER NOT NULL, letter CHAR(1) NOT NULL, text TEXT NOT NULL, path TEXT NOT NULL)");
 		db.run("CREATE TABLE Links (vers_id INTEGER NOT NULL, text TEXT NOT NULL, path TEXT NOT NULL)");

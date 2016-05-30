@@ -1,5 +1,3 @@
-
-var request = require('sync-request');
 var cheerio = require('cheerio');
 var URL = require('url-parse');
 var sqlite3 = require('sqlite3').verbose();
@@ -29,6 +27,11 @@ function Chapter(bookId, shortName, title, path)
 		number = shortNameArray[1];
 	}
 
+	if (title == null)
+	{
+		console.log(bookId + ' ' + shortName + ' null title ' + title);
+	}
+
 	this.number = number;
 	this.title = title;
 	this.relativePath = path;
@@ -36,7 +39,7 @@ function Chapter(bookId, shortName, title, path)
 }
 
 
-function ProcessRows($, rows, currentBook, dirName)
+function ProcessRows(file, $, rows, currentBook)
 {
 	for (var i = 0; i < rows.length; i++) {
 		var row = rows[i];
@@ -44,9 +47,12 @@ function ProcessRows($, rows, currentBook, dirName)
 
 		var shortName = $(row.children[0]).text();
 
-		var intelept = (shortName == " - " && currentBook.shortName == "Sir");
-		if (intelept)
+		// exceptions with Chapter 0 - Sir and Est
+		var firstChapterExceptions = ["Sir", "Est"];
+		var isFirstChapterException = (shortName == " - " && firstChapterExceptions.indexOf(currentBook.shortName) !== -1);
+		if (isFirstChapterException)
 		{
+			debugger;
 			shortName = "Cap. 0";
 		}
 
@@ -54,7 +60,7 @@ function ProcessRows($, rows, currentBook, dirName)
 		var exceptions = ["Ps", "Cant", "Ir"];
 		if (link.children.length == 1 ||
 			exceptions.indexOf(currentBook.shortName) != -1 ||
-			intelept)
+			isFirstChapterException)
 		{
 			longName = link.children[0].data;
 		}
@@ -72,45 +78,27 @@ function ProcessRows($, rows, currentBook, dirName)
 
 		var currentChapter = new Chapter(currentBook.bookId, shortName, longName, relativePath);
 
-		console.log("Will get data for " +
-			currentChapter.bookId + " - " +
-			currentChapter.number + " - " +
-			currentChapter.title + " - " +
-			currentChapter.relativePath + " - " +
-			currentChapter.url);
-
-		var chapterHtml = request('GET', currentChapter.url);
-		var chapterBody;
-		try {
-			chapterBody = chapterHtml.getBody();
-			debugger;
-			var chapterFile = fs.createWriteStream(".\\descarcate\\" + dirName + "\\" + currentChapter.number + ".html");
-			chapterFile.write(chapterBody);
-		} catch (err) {
-			console.log("Error for URL " + currentChapter.url + " : " + error);
-			return;
-		}
+		var db = new sqlite3.cached.Database(file);
+		var stmt = db.prepare("INSERT INTO Chapters VALUES (?, ?, ?, ?)");
+		stmt.run(currentChapter.bookId, currentChapter.number, currentChapter.title, currentChapter.relativePath);
+		stmt.finalize();
 	}
 }
 
-var books = [];
-//TODO 
-// - create book object
-// - for each book object sync-request and store in the DB the chapter objects
+var files = fs.readdirSync('./descarcate/').filter((value)=>value.indexOf('html')!==-1);
 
 var db = new sqlite3.Database(file);
+
 db.serialize(function() {
 	db.each("SELECT rowid, test_id, s_name, l_name, path FROM Books", function(err, row) {
 		var currentBook = new Book(row.rowid, row.s_name, row.l_name, row.path);
 
-		books.push(currentBook);
-
-		/*
-		var debugIds = [24];
-		if (debugIds.indexOf(currentBook.bookId) === -1)
+		var debugIds = [17];
+		if (debugIds.indexOf(currentBook.bookId) !== -1)
 		{
 			return;
-		}*/
+		}
+
 
 		console.log("Current book " +
 			currentBook.bookId + " " + 
@@ -119,27 +107,14 @@ db.serialize(function() {
 			currentBook.longName +" "+
 			currentBook.relativePath + " " + currentBook.url);
 
-		var dirName = currentBook.bookId + "-" + currentBook.shortName;
-		var res = request('GET', currentBook.url);
-		var body;
+		var fileName = currentBook.bookId + "-" + currentBook.shortName + ".html";
 		var $;
-		try {
-			body = res.getBody();
-			var file = fs.createWriteStream(".\\descarcate\\" + dirName + ".html");
-			file.write(body);
-			$ = cheerio.load(body);
-		} catch (err) {
-			console.log("Error for URL " + currentBook.bookId + "-" + currentBook.url + " : " + error);
-			return;
-		}
-
-		mkdirp(".\\descarcate\\" + dirName + '\\', function(err) { });
-
+		// res
+		$ = cheerio.load(fs.readFileSync('.\\descarcate\\' + fileName));
 		var title = $('body>div');
 		var rows = $('body>table>tr');
 
-		// fiecare rand are doua celule: prescurtarea si numele cu legatura
-		ProcessRows($, rows, currentBook, dirName);
+		ProcessRows(file, $, rows, currentBook);
 	});
 });
 db.close();
