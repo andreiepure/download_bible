@@ -99,7 +99,6 @@ db.serialize(function() {
 			return;
 		}
 
-
 		console.log("Current book " +
 			currentBook.bookId + " " + 
 			currentBook.testamentId +" "+
@@ -114,7 +113,7 @@ db.serialize(function() {
 		var title = $('body>div');
 		var rows = $('body>table>tr');
 
-		ProcessRows(file, $, rows, currentBook);
+	//	ProcessRows(file, $, rows, currentBook);
 	});
 });
 db.close();
