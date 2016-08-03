@@ -1,3 +1,4 @@
+// This writes the chapters HTML files locally
 
 var request = require('sync-request');
 var cheerio = require('cheerio');
