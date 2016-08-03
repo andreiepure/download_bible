@@ -37,7 +37,7 @@ function Note(chapterId, versetNumber, letter, text)
 
 var db = new sqlite3.Database(file);
 
-function RetrieveAndInsertNoteInDb(verset, letter, noteRelativeUrl)
+function RetrieveNote(verset, letter, noteRelativeUrl)
 {
 	var url = "http://www.biblia-bartolomeu.ro/" + noteRelativeUrl;
 	var res = request('GET', url);
@@ -53,41 +53,55 @@ function RetrieveAndInsertNoteInDb(verset, letter, noteRelativeUrl)
 
 	var text = $('body>div').html();
 
-	var note = Note(verset.chapterId, verset.number, letter, text);
-
-	// insert the note in the db
-	//var db = new sqlite3.cached.Database(file);
-	//var stmt = db.prepare("INSERT INTO Notes VALUES (?, ?, ?, ?)");
-	//stmt.run(note.chapterId, note.versetNumber, note.letter, note.text);
-	//stmt.finalize();
+	return text;
 }
 
 function ProcessRows(file, $, rows, currentChapter)
 {
+
 	for (var i = 0; i < rows.length; i++) {
 		var row = rows[i];
 
-		var number;
-		var text = '';
-		//TODO iterate over the components and check if they are:
-		// - text OR
-		// - note (a link)
-		// BUILD THE TEXT
+		var versetNumber;
+		var versetText;
+		var versetNotes = [];
+		var versetLinks = [];
 
-			// inside the loop 
-			// TODO retrieve and insert the notes (if any) for each verset
-			var currentVerset = new Verset(currentChapter.chapterId, number, text);
-			var letter;
-			var noteRelativeUrl;
-			RetrieveAndInsertNoteInDb(currentVerset, letter, noteRelativeUrl);
+		var versetNumber = $(row.children[0].children[1]).text();
+		var content = row.children[1];
+		var versetTextTokens = [];
 
-		// after the loop
-		// TODO retrieve and insert the links (if any) for each verset
+		content.children.forEach(function(childElement) {
+			if (childElement.name === undefined) {
+				versetTextTokens.push($(childElement).text());
+			}
+			else {
+				if (childElement.name === 'sup') {
+					// TODO extract the href from the childElement.children[0].attribs.href
+					// TODO extract  the letter from the $(childElement).text()
+					// var text = RetrieveNote();
+					// var note = Note(verset.chapterId, verset.number, letter, text);
+					// versetNotes.push(note);
+				}
+				else if (childElement.name === 'div') {
+				}
+				else {
+					console.log("Unrecognized childElement name in chapter row: " + childElement.name);
+				}
+			}
+		});
+
+			//var currentVerset = new Verset(currentChapter.chapterId, number, text);
 
 		//var db = new sqlite3.cached.Database(file);
 		//var stmt = db.prepare("INSERT INTO Versets VALUES (?, ?, ?)");
 		//stmt.run(currentVerset.chapterId, currentVerset.number, currentVerset.text);
 		//stmt.finalize();
+		/*var db = new sqlite3.cached.Database(file);
+		var stmt = db.prepare("INSERT INTO Notes VALUES (?, ?, ?, ?)");
+		stmt.run(note.chapterId, note.versetNumber, note.letter, note.text);
+		stmt.finalize();*/
+
 	}
 }
 
@@ -115,6 +129,7 @@ db.serialize(function() {
 		$ = cheerio.load(fs.readFileSync('.\\descarcate\\' + dirName + "\\ " + fileName));
 
 		//var title = $('body>div');
+
 
 		var rows = $('body>table>tr');
 		ProcessRows(file, $, rows, currentChapter);
