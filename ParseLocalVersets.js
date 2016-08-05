@@ -27,17 +27,25 @@ function Verset(chapterId, number, text)
 	this.text = text;
 }
 
-function Note(chapterId, versetNumber, letter, text)
+function Note(versetId, letter, text)
 {
-	this.chapterId = chapterId;
-	this.versetNumber = versetNumber;
+	this.versetId = versetId;
 	this.letter = letter;
 	this.text = text;
 }
 
+function Link(versetId, targetBook, targetChapter, startVerset, endVerset)
+{
+	this.versetId = versetId;
+	this.targetBook = targetBook;
+	this.targetChapter = targetChapter;
+	this.targetStartVerset = startVerset;
+	this.targetEndVerset = (endVerset === undefined) ? '-1' : endVerset;
+}
+
 var db = new sqlite3.Database(file);
 
-function RetrieveNote(verset, letter, noteRelativeUrl)
+function RetrieveNote(noteRelativeUrl)
 {
 	var url = "http://www.biblia-bartolomeu.ro/" + noteRelativeUrl;
 	var res = request('GET', url);
@@ -66,24 +74,38 @@ function ProcessRows(file, $, rows, currentChapter)
 		var versetText;
 		var versetNotes = [];
 		var versetLinks = [];
+		var versetTextTokens = [];
 
 		var versetNumber = $(row.children[0].children[1]).text();
 		var content = row.children[1];
-		var versetTextTokens = [];
 
 		content.children.forEach(function(childElement) {
 			if (childElement.name === undefined) {
-				versetTextTokens.push($(childElement).text());
+				versetTextTokens.push($(childElement).text().trim());
 			}
 			else {
 				if (childElement.name === 'sup') {
-					// TODO extract the href from the childElement.children[0].attribs.href
-					// TODO extract  the letter from the $(childElement).text()
-					// var text = RetrieveNote();
-					// var note = Note(verset.chapterId, verset.number, letter, text);
-					// versetNotes.push(note);
+					var href = childElement.children[0].attribs.href
+					var noteLetter = $(childElement).text()
+					var text = RetrieveNote(href);
+					var note = new Note('-', noteLetter, text);
+					versetNotes.push(note);
 				}
 				else if (childElement.name === 'div') {
+					childElement.children.forEach(function(versetLink) {
+						var linkContent = $(versetLink).text();
+						var pieces = linkContent.split(' ');
+						if (pieces.length == 2) {
+							var bookAndVersets = pieces[1].split(':');
+							var versets = bookAndVersets[1].split('-');
+							var bookShortName = pieces[0];
+							var chapter = bookAndVersets[0];
+							var firstVerset = versets[0];
+							var lastVerset = versets[1];
+							var link = new Link('-', bookShortName, chapter, firstVerset, lastVerset);
+							versetLinks.push(link);
+						}
+					});
 				}
 				else {
 					console.log("Unrecognized childElement name in chapter row: " + childElement.name);
@@ -91,7 +113,15 @@ function ProcessRows(file, $, rows, currentChapter)
 			}
 		});
 
-			//var currentVerset = new Verset(currentChapter.chapterId, number, text);
+		var versetText = versetTextTokens.join(' ');
+		// TODO insert the verset
+		// TODO retrieve the verset unique id
+		// TODO add the verset unique id to all versetLinks and to all versetNotes
+		// TODO insert the notes
+		// TODO insert the links
+		// TODO praise God :)
+
+		//var currentVerset = new Verset(currentChapter.chapterId, number, text);
 
 		//var db = new sqlite3.cached.Database(file);
 		//var stmt = db.prepare("INSERT INTO Versets VALUES (?, ?, ?)");
