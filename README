@@ -1,0 +1,15 @@
+node.js scripts do download and sqlize the Romanian Orthodox Bible from biblia-bartolomeu.ro
+deliverable: SQL DB with the normalized Bible
+
+How to debug:
+https://nodejs.org/api/debugger.html
+
+$ node debug myscript.js
+
+To put a breakpoint, insert the below line
+  debugger;
+
+The repl command allows code to be evaluated remotely.
+The next command steps to the next line.
+The cont command will continue execution until next breakpoint.
+Type help to see what other commands are available.
