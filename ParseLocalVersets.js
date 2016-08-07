@@ -157,13 +157,13 @@ function ProcessRows(file, $, rows, chapterId)
 			debugger;
 
 			// retrieve the verset unique id
-		//	var versetId;
-	//		var selectStatement = "SELECT rowid AS id FROM Versets WHERE chap_id = " + chapterId + " AND number = " + versetNumber;
+			//	var versetId;
+			//		var selectStatement = "SELECT rowid AS id FROM Versets WHERE chap_id = " + chapterId + " AND number = " + versetNumber;
 
 			var noteStatement = db.prepare("INSERT INTO TemporaryNotes VALUES (?, ?, ?, ?)");
 			debugger;
 			versetNotes.forEach(function(note) {
-					noteStatement.run(chapterId, versetNumber, note.letter, note.text);
+					noteStatement.run(chapterId, versetNumber, note.letter, decodeURIComponent(note.text));
 			});
 			noteStatement.finalize();
 
@@ -173,7 +173,7 @@ function ProcessRows(file, $, rows, chapterId)
 				// get the start verset id
 				//var startVersetId = GetVersetId(link.targetBook, link.targetChapter, link.targetStartVerset);
 				//var endVersetId = GetVersetId(link.targetBook, link.targetChapter, link.targetEndVerset);
-				linkStatement.run(chapterId, versetNumber, targetBookShortName, targetChapterNumber, startVersetNumber, endVersetNumber);
+				linkStatement.run(chapterId, versetNumber, link.targetBook, link.targetChapter, link.targetStartVerset, link.targetEndVerset);
 			});
 
 			linkStatement.finalize();
