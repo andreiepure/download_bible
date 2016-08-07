@@ -50,6 +50,7 @@ function requestText(db, url)
 						currentBook.shortName +" "+
 						currentBook.longName +" "+
 						currentBook.relativePath);
+					repeat = false;
 				});
 			} catch (er) {
 				console.log("Caught error " + er + " for " +
