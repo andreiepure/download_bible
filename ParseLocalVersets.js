@@ -47,21 +47,30 @@ function Link(chapterId, versetNumber, targetBookShortName, targetChapter, start
 
 function RetrieveNote(noteRelativeUrl)
 {
-	var url = "http://www.biblia-bartolomeu.ro/" + noteRelativeUrl;
-	var res = request('GET', url);
-	var body;
-	try {
-		body = res.getBody();
-	} catch (err) {
-		console.log("Error for URL " + url + " : " + error);
-		return;
-	}
+	var retry = 5;
+	do {
+		try {
+			var url = "http://www.biblia-bartolomeu.ro/" + noteRelativeUrl;
+			var res = request('GET', url);
+			var body;
+			try {
+				body = res.getBody();
+			} catch (err) {
+				console.log("Error for URL " + url + " : " + error);
+				return;
+			}
 
-	var $ = cheerio.load(body);
+			var $ = cheerio.load(body);
 
-	var text = $('body>div').html();
+			var text = $('body>div').html();
 
-	return text;
+			return text;
+		}
+		catch (error) {
+			retry--;
+			console.log('Error for URL ' + url + ' : ' + error + ' will retry ' + retry);
+		}
+	} while (retry > 0);
 }
 
 /*
@@ -101,8 +110,22 @@ function ProcessRows(file, $, rows, chapterId)
 		var versetTextTokens = [];
 
 		content.children.forEach(function(childElement) {
-			if (childElement.name === undefined || childElement.name ==='b' || childElement.name ==='i' ) {
-				versetTextTokens.push($(childElement).text().trim());
+			if (childElement.name === undefined ||
+				childElement.name === 'br' ||
+				childElement.name === 'p' ||
+				childElement.name === 'b' ||
+				childElement.name === 'i' ||
+				(childElement.name == 'div' && childElement.attribs !== undefined && childElement.attribs.align !== 'right')
+				) {
+				// Estera
+				var text;
+				if (childElement.name == 'div' && childElement.attribs !== undefined && childElement.attribs.align !== 'right') {
+					text = $(childElement).html();
+				}
+				else {
+					text = $(childElement).text().trim();
+				}
+				versetTextTokens.push(text);
 			}
 			else {
 				if (childElement.name === 'sup') {
@@ -112,19 +135,26 @@ function ProcessRows(file, $, rows, chapterId)
 					var note = new Note(chapterId, versetNumber, noteLetter, text);
 					versetNotes.push(note);
 				}
-				else if (childElement.name === 'div') {
+				else if (childElement.name === 'div' && childElement.attribs !== undefined && childElement.attribs.align === 'right') {
 					childElement.children.forEach(function(versetLink) {
 						var linkContent = $(versetLink).text();
-						var pieces = linkContent.split(' ');
-						if (pieces.length == 2) {
-							var bookAndVersets = pieces[1].split(':');
-							var versets = bookAndVersets[1].split('-');
-							var bookShortName = pieces[0];
-							var chapter = bookAndVersets[0];
-							var firstVerset = versets[0];
-							var lastVerset = versets[1];
-							var link = new Link(chapterId, versetNumber, bookShortName, chapter, firstVerset, lastVerset);
-							versetLinks.push(link);
+						if (linkContent !== undefined) {
+							var pieces = linkContent.split(' ');
+							if (pieces.length == 2) {
+								var bookAndVersets = pieces[1].split(':');
+								if (bookAndVersets.length == 2) {
+									var versets = bookAndVersets[1].split('-');
+									var bookShortName = pieces[0];
+									var chapter = bookAndVersets[0];
+									var firstVerset = versets[0];
+									var lastVerset = versets[1];
+									var link = new Link(chapterId, versetNumber, bookShortName, chapter, firstVerset, lastVerset);
+									versetLinks.push(link);
+								}
+								else {
+									console.log("chapter id " + chapterId + " bookAndVersets does not have 2... " + linkContent);
+								}
+							}
 						}
 					});
 				}
@@ -176,11 +206,12 @@ db.serialize(function() {
 	db.each("SELECT C.rowid, C.book_id, C.number, C.title, C.path, B.s_name FROM Chapters AS C INNER JOIN Books AS B ON C.book_id = B.rowid", function(err, row) {
 		var currentChapter = new Chapter(row.rowid, row.book_id, row.number, row.title, row.path, row.s_name);
 
-		var debugIds = [75];
-		if (debugIds.indexOf(currentChapter.bookId) === -1)
+		/*
+		var debugIds = [2];
+		if (debugIds.indexOf(currentChapter.chapterId) === -1)
 		{
 			return;
-		}
+		}*/
 
 		var dirName = currentChapter.bookId + "-" + currentChapter.bookShortName;
 		var fileName = currentChapter.number + ".html";
@@ -197,7 +228,6 @@ db.serialize(function() {
 		//var title = $('body>div');
 
 		var rows = $('body>table>tr');
-		debugger;
 		ProcessRows(file, $, rows, currentChapter.chapterId);
 })
 });
