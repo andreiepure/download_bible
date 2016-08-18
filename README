@@ -1,6 +1,19 @@
 node.js scripts do download and sqlize the Romanian Orthodox Bible from biblia-bartolomeu.ro
 deliverable: SQL DB with the normalized Bible
 
+Steps I did to SQLize the bible:
+1. Run the CreateDb script which creates the schema and inserts the Testaments data.
+But not it's out of date because I am using the SqliteBrowser to alter the schema.
+
+2. Run the GetBooks scripts which inserts the Books data
+
+3. Run the DownloadChapters script which downloads the chapters table of contents HTML
+locally
+
+4. Run the ParseLocalChapters in order to insert the Chapters data
+
+5. [TODO] Insert the versets, notes and verset links, but I it's too much data for one go.
+
 How to debug:
 https://nodejs.org/api/debugger.html
 
