@@ -1,13 +1,9 @@
-function Chapter(chapterId, bookId, number, title, path, bookShortName)
-{
-	this.chapterId = chapterId;
-	this.bookId = bookId;
-	this.bookShortName = bookShortName;
-	this.number = number;
-	this.title = title;
-	this.relativePath = path;
-	this.url =  "http://www.biblia-bartolomeu.ro/index-C.php" + this.relativePath;
-}
+var request = require('sync-request');
+var cheerio = require('cheerio');
+var URL = require('url-parse');
+var sqlite3 = require('sqlite3').verbose();
+var fs = require('fs');
+var mkdirp = require('mkdirp');
 
 function Verset(chapterId, number, text)
 {
@@ -73,27 +69,13 @@ function RetrieveNote(noteRelativeUrl)
 	} while (retry > 0);
 }
 
-/*
-function GetVersetId(bookShortName, chapterNumber, versetNumber)
+// Process rows
+module.exports = function(file, $, rows, chapterId)
 {
-	var statement =
-		"SELECT rowid AS id FROM Books INNER JOIN Chapters ON Books.rowid = Chapters.book_id " +
-		"INNER JOIN Versets ON Chapters.rowid = Versets.chap_id " +
-		"WHERE Books.s_name = \"" + link.targetBook + "\" AND Chapters.number = "+ link.targetChapter +
-		"AND Versets.number = " + versetNumber;
+	var file = "bible.db";
+	var exists = fs.existsSync(file);
+	var db = new sqlite3.Database(file);
 
-	var versetId;
-	var db = new sqlite3.cached.Database(file);
-	db.each(selectStatement, function(err, row) {
-		versetId = row.id;
-	});
-
-	return versetId;
-}
-*/
-function ProcessRows(file, $, rows, chapterId)
-{
-	var db = new sqlite3.cached.Database(file);
 	var versetNotes = [];
 	var versetLinks = [];
 	var versets = [];
@@ -188,49 +170,5 @@ function ProcessRows(file, $, rows, chapterId)
 	});
 	linkStatement.finalize();
 
-	console.log("Inserted for "+chapterId);
+	db.close();
 }
-
-var request = require('sync-request');
-var cheerio = require('cheerio');
-var URL = require('url-parse');
-var sqlite3 = require('sqlite3').verbose();
-var fs = require('fs');
-var mkdirp = require('mkdirp');
-
-var file = "bible.db";
-var exists = fs.existsSync(file);
-var db = new sqlite3.Database(file);
-
-db.serialize(function() {
-	db.each("SELECT C.rowid, C.book_id, C.number, C.title, C.path, B.s_name FROM Chapters AS C INNER JOIN Books AS B ON C.book_id = B.rowid", function(err, row) {
-		var currentChapter = new Chapter(row.rowid, row.book_id, row.number, row.title, row.path, row.s_name);
-
-		/*
-		var debugIds = [2];
-		if (debugIds.indexOf(currentChapter.chapterId) === -1)
-		{
-			return;
-		}*/
-
-		var dirName = currentChapter.bookId + "-" + currentChapter.bookShortName;
-		var fileName = currentChapter.number + ".html";
-
-		console.log(dirName + " " + 
-			currentChapter.number + " " + 
-			fileName + " " + 
-			currentChapter.relativePath + " " + 
-			currentChapter.url);
-
-		var $;
-		$ = cheerio.load(fs.readFileSync('.\\descarcate\\' + dirName + "\\ " + fileName));
-
-		//var title = $('body>div');
-
-		var rows = $('body>table>tr');
-		ProcessRows(file, $, rows, currentChapter.chapterId);
-})
-});
-	
-db.close();
-
