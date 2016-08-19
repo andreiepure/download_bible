@@ -169,6 +169,4 @@ module.exports = function(file, $, rows, chapterId)
 		linkStatement.run(link.chapterId, link.versetNumber, link.targetBookShortName, link.targetChapter, link.targetStartVerset, link.targetEndVerset);
 	});
 	linkStatement.finalize();
-
-	db.close();
 }
