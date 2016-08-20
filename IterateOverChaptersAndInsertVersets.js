@@ -20,6 +20,49 @@ function Chapter(chapterId, bookId, number, title, path, bookShortName)
 	this.url =  "http://www.biblia-bartolomeu.ro/index-C.php" + this.relativePath;
 }
 
+var total = 1350;
+var inserted = 0;
+
+function ChapterContent(file, $, rows, chapterId)
+{
+	this.file = file;
+	this.$ = $;
+	this.rows = rows;
+	this.chapterId = chapterId;
+}
+
+function Insert(contents)
+{
+	var c = contents.slice(0);
+	(function insertContents() {
+
+		debugger;
+		var content = c.splice(0, 1)[0];
+		if (content) {
+			try {
+				var startTime = new Date();
+				require('./InsertVersetsForChapter.js')(content.file, content.$, content.rows, content.chapterId, db, insertContents);
+
+				var endTime = new Date();
+				var elapsed = endTime.getTime() - startTime.getTime();
+
+				// wait for the chapter versets to be inserted
+
+				console.log("[ "+ endTime.toLocaleTimeString() + "] " +  content.chapterId + " Finished starting the insert, time " + elapsed);
+
+				inserted = inserted + 1;
+
+				console.log("[ " + endTime.toLocaleTimeString() + "] STATUS " + inserted + " / 1350");
+
+			} catch (exception) {
+				console.log('exception was caught ' + exception);
+			}
+		}
+	})();
+}
+
+var contents = [];
+
 db.serialize(function() {
 	db.each("SELECT C.rowid, C.book_id, C.number, C.title, C.path, B.s_name FROM Chapters AS C INNER JOIN Books AS B ON C.book_id = B.rowid", function(err, row) {
 		var currentChapter = new Chapter(row.rowid, row.book_id, row.number, row.title, row.path, row.s_name);
@@ -33,21 +76,20 @@ db.serialize(function() {
 		var dirName = currentChapter.bookId + "-" + currentChapter.bookShortName;
 		var fileName = currentChapter.number + ".html";
 
-		var startTime = new Date();
 
 		var $;
 		$ = cheerio.load(fs.readFileSync('.\\descarcate\\' + dirName + "\\ " + fileName));
 
 		var rows = $('body>table>tr');
-		require('./InsertVersetsForChapter.js')(file, $, rows, currentChapter.chapterId);
-
-		var endTime = new Date();
-		var elapsed = endTime.getTime() - startTime.getTime();
-
-		console.log("[ "+ endTime.toLocaleTimeString() + "] Inserted in " + elapsed + " ChapterId=" + currentChapter.chapterId +
-			" DirName="+ dirName +
-			" ChapterNumber=" + currentChapter.number);
 
 
-})
+		var content = new ChapterContent(file, $, rows, currentChapter.chapterId);
+		contents.push(content);
+
+		if (content.length == 1350 || contents.length == debugIds.length) {
+			Insert(contents);
+		}
+	})
 });
+
+

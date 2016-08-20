@@ -4,42 +4,12 @@ var URL = require('url-parse');
 var sqlite3 = require('sqlite3').verbose();
 var fs = require('fs');
 var mkdirp = require('mkdirp');
-
-function Verset(chapterId, number, text)
-{
-	this.chapterId = chapterId;
-	this.number = number;
-	this.text = text;
-}
+var Note = require('./Note');
+var Link = require('./Link');
+var Verset = require('./Verset');
 
 // IMPORTANT
 // for Note and Link, the versetId is not present at parse time.
-
-// An addnotation (explanatory note) for a certain verset. The HTML is kept
-// as original (it will have external links to the Dervent Monastery website)
-function Note(chapterId, versetNumber, letter, text)
-{
-	this.chapterId = chapterId;
-	this.versetNumber = versetNumber;
-	this.letter = letter;
-	this.text = text;
-}
-
-// A link to one or more versets in the Scripture - usually versets have multiple,
-// especially in the New Testament.
-// In the DB, the start and end verset ids are kept in order to keep the DB normalized
-function Link(chapterId, versetNumber, targetBookShortName, targetChapter, startVerset, endVerset)
-{
-	//this.versetId = versetId;
-	this.chapterId = chapterId;
-	this.versetNumber = versetNumber;
-
-	this.targetBookShortName = targetBookShortName;
-	this.targetChapter = targetChapter;
-	this.targetStartVerset = startVerset;
-	this.targetEndVerset = (endVerset === undefined) ? startVerset : endVerset;
-}
-
 
 function RetrieveNote(noteRelativeUrl)
 {
@@ -70,12 +40,8 @@ function RetrieveNote(noteRelativeUrl)
 }
 
 // Process rows
-module.exports = function(file, $, rows, chapterId)
+module.exports = function(file, $, rows, chapterId, db, nextInsert)
 {
-	var file = "bible.db";
-	var exists = fs.existsSync(file);
-	var db = new sqlite3.Database(file);
-
 	var versetNotes = [];
 	var versetLinks = [];
 	var versets = [];
@@ -152,21 +118,36 @@ module.exports = function(file, $, rows, chapterId)
 
 	}
 
-	var stmt = db.prepare("INSERT INTO Versets VALUES (?, ?, ?)");
-	versets.forEach(function(verset) {
-		stmt.run(verset.chapterId, verset.number, verset.text);
-	});
-	stmt.finalize();
+	var startDb = Date.now();
 
-	var noteStatement = db.prepare("INSERT INTO TemporaryNotes VALUES (?, ?, ?, ?)");
-	versetNotes.forEach(function(note) {
-			noteStatement.run(note.chapterId, note.versetNumber, note.letter, decodeURIComponent(note.text));
-	});
-	noteStatement.finalize();
+	db.serialize(function() {
+		db.run("begin transaction");
 
-	var linkStatement = db.prepare("INSERT INTO TemporaryLinks VALUES (?, ?, ?, ?, ?, ?)");
-	versetLinks.forEach(function(link) {
-		linkStatement.run(link.chapterId, link.versetNumber, link.targetBookShortName, link.targetChapter, link.targetStartVerset, link.targetEndVerset);
+		var stmt = db.prepare("INSERT INTO Versets VALUES (?, ?, ?)");
+		versets.forEach(function(verset) {
+			stmt.run(verset.chapterId, verset.number, verset.text);
+		});
+
+		stmt.finalize();
+
+		var noteStatement = db.prepare("INSERT INTO TemporaryNotes VALUES (?, ?, ?, ?)");
+		versetNotes.forEach(function(note) {
+				noteStatement.run(note.chapterId, note.versetNumber, note.letter, decodeURIComponent(note.text));
+		});
+		noteStatement.finalize();
+
+		var linkStatement = db.prepare("INSERT INTO TemporaryLinks VALUES (?, ?, ?, ?, ?, ?)");
+		versetLinks.forEach(function(link) {
+			linkStatement.run(link.chapterId, link.versetNumber, link.targetBookShortName, link.targetChapter, link.targetStartVerset, link.targetEndVerset);
+		});
+		linkStatement.finalize();
+
+		db.run("commit", [], function(){
+			var endTime = new Date();
+			console.log("[ "+ endTime.toLocaleTimeString() + "] Changes have been committed for chapter " + chapterId + " in " + (endTime.getTime() - startDb) + " ms");
+			nextInsert();
+		});
 	});
-	linkStatement.finalize();
+
+
 }
