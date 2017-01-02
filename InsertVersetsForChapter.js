@@ -11,8 +11,7 @@ var Verset = require('./Verset');
 // IMPORTANT
 // for Note and Link, the versetId is not present at parse time.
 
-function RetrieveNote(noteRelativeUrl)
-{
+function RetrieveNote(noteRelativeUrl) {
 	var retry = 5;
 	do {
 		try {
@@ -40,22 +39,14 @@ function RetrieveNote(noteRelativeUrl)
 	} while (retry > 0);
 }
 
-// Process rows
-module.exports = function(file, $, rows, chapterId, db, nextInsert)
-{
-	var versetNotes = [];
-	var versetLinks = [];
-	var versets = [];
 
-	for (var i = 0; i < rows.length; i++) {
-		var row = rows[i];
-
-		// needed to insert
-		var versetNumber = $(row.children[0].children[1]).text();
-		var versetText;
-
-		// needed to construct
-		var content = row.children[1];
+// Given a row in the chapter, this function retrieves the data for the verset:
+// returns the verset text
+// the verset notes (pushes to a given array)
+// the verset links (pushes to a given array)
+// Because one verset can have a imbricated rows (see Zaharia chapter 9),
+// it also uses recursion
+function RetrieveVerset($, chapterId, versetNumber, content, versetNotes, versetLinks) {
 		var versetTextTokens = [];
 
 		content.children.forEach(function(childElement) {
@@ -67,9 +58,22 @@ module.exports = function(file, $, rows, chapterId, db, nextInsert)
 				(childElement.name == 'div' && childElement.attribs !== undefined && childElement.attribs.align !== 'right')
 				) {
 
-				// Estera
 				var text;
-				if (childElement.name == 'div' && childElement.attribs !== undefined && childElement.attribs.align !== 'right') {
+
+				// Zaharia chapter 9
+				if (childElement.children && childElement.children.length > 0) {
+					var innerNotes = [];
+					var innerLinks = [];
+
+					text = RetrieveVerset($, chapterId, versetNumber, childElement, innerNotes, innerLinks);
+
+					Array.prototype.push.apply(versetNotes, innerNotes);
+					if (innerLinks.length > 0) {
+						console.log("Found an inner verset with inner links for chapter " + chapterId + " verset " + versetNumber);
+					}
+				}
+				// Estera
+				else if (childElement.name == 'div' && childElement.attribs !== undefined && childElement.attribs.align !== 'right') {
 					text = $(childElement).html();
 				}
 				else {
@@ -79,6 +83,7 @@ module.exports = function(file, $, rows, chapterId, db, nextInsert)
 				versetTextTokens.push(text);
 			}
 			else {
+
 				if (childElement.name === 'sup') {
 					var href = childElement.children[0].attribs.href
 					var noteLetter = $(childElement).text()
@@ -116,11 +121,31 @@ module.exports = function(file, $, rows, chapterId, db, nextInsert)
 		});
 
 		versetText = versetTextTokens.join(' ');
+		return versetText;
+}
+
+
+// Process rows
+module.exports.func = function(file, $, rows, chapterId, db, nextInsert) {
+	var versetNotes = [];
+	var versetLinks = [];
+	var versets = [];
+
+	for (var i = 0; i < rows.length; i++) {
+		var row = rows[i];
+
+		// needed to insert
+		var versetNumber = $(row.children[0].children[1]).text();
+		var versetText;
+
+		// needed to construct
+		var content = row.children[1];
+
+		versetText = RetrieveVerset($, chapterId, versetNumber, content, versetNotes, versetLinks);
+
 		var verset = new Verset(chapterId, versetNumber, versetText);
 		versets.push(verset);
 	}
-
-	debugger;
 
 	var startDb = Date.now();
 
@@ -129,6 +154,7 @@ module.exports = function(file, $, rows, chapterId, db, nextInsert)
 
 		var stmt = db.prepare("INSERT INTO Versets VALUES (?, ?, ?)");
 		versets.forEach(function(verset) {
+
 			stmt.run(verset.chapterId, verset.number, verset.text);
 		});
 
@@ -148,10 +174,8 @@ module.exports = function(file, $, rows, chapterId, db, nextInsert)
 
 		db.run("commit", [], function(){
 			var endTime = new Date();
-			console.log("[ "+ endTime.toLocaleTimeString() + "] Changes have been committed for chapter " + chapterId + " in " + (endTime.getTime() - startDb) + " ms");
+			console.log("[ "+ endTime.toLocaleString() + "] Changes have been committed for chapter " + chapterId + " in " + (endTime.getTime() - startDb) + " ms");
 			nextInsert();
 		});
 	});
-
-
 }

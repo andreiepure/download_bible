@@ -35,24 +35,24 @@ function Insert(contents)
 {
 	var c = contents.slice(0);
 	(function insertContents() {
-
-		debugger;
 		var content = c.splice(0, 1)[0];
 		if (content) {
 			try {
 				var startTime = new Date();
-				require('./InsertVersetsForChapter.js')(content.file, content.$, content.rows, content.chapterId, db, insertContents);
+
+				var insert = require('./InsertVersetsForChapter.js');
+				insert.func(content.file, content.$, content.rows, content.chapterId, db, insertContents);
 
 				var endTime = new Date();
 				var elapsed = endTime.getTime() - startTime.getTime();
 
 				// wait for the chapter versets to be inserted
 
-				console.log("[ "+ endTime.toLocaleTimeString() + "] " +  content.chapterId + " Finished starting the insert, time " + elapsed);
+				console.log("[ "+ endTime.toLocaleString() + "] " +  content.chapterId + " Finished starting the insert, time " + elapsed);
 
 				inserted = inserted + 1;
 
-				console.log("[ " + endTime.toLocaleTimeString() + "] STATUS " + inserted + " / 1350");
+				console.log("[ " + endTime.toLocaleString() + "] STATUS " + inserted + " / 1350");
 
 			} catch (exception) {
 				console.log('exception was caught ' + exception);
@@ -71,7 +71,7 @@ db.serialize(function() {
 		var debugIds = [];
 
 		/*
-		debugIds.push(1350);
+		debugIds.push(1348);
 		if (debugIds.indexOf(currentChapter.chapterId) === -1)
 		{
 			return;
@@ -85,7 +85,6 @@ db.serialize(function() {
 		$ = cheerio.load(fs.readFileSync('.\\descarcate\\' + dirName + "\\ " + fileName));
 
 		var rows = $('body>table>tr');
-
 
 		var content = new ChapterContent(file, $, rows, currentChapter.chapterId);
 		contents.push(content);
