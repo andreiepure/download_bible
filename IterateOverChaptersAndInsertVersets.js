@@ -89,7 +89,7 @@ db.serialize(function() {
 		var content = new ChapterContent(file, $, rows, currentChapter.chapterId);
 		contents.push(content);
 
-		if (content.length == 1350 || contents.length == debugIds.length) {
+		if (contents.length == 1350 || contents.length == debugIds.length) {
 			Insert(contents);
 		}
 	})
