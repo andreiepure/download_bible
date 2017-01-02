@@ -64,14 +64,18 @@ function Insert(contents)
 var contents = [];
 
 db.serialize(function() {
-	db.each("SELECT C.rowid, C.book_id, C.number, C.title, C.path, B.s_name FROM Chapters AS C INNER JOIN Books AS B ON C.book_id = B.rowid", function(err, row) {
+	db.each("SELECT C.rowid, C.book_id, C.number, C.title, C.path, B.s_name FROM Chapters AS C INNER JOIN Books AS B ON C.book_id = B.rowid ORDER BY C.rowid ASC", function(err, row) {
 		var currentChapter = new Chapter(row.rowid, row.book_id, row.number, row.title, row.path, row.s_name);
 
-		var debugIds = [50,51];
+
+		var debugIds = [];
+
+		/*
+		debugIds.push(1350);
 		if (debugIds.indexOf(currentChapter.chapterId) === -1)
 		{
 			return;
-		}
+		}*/
 
 		var dirName = currentChapter.bookId + "-" + currentChapter.bookShortName;
 		var fileName = currentChapter.number + ".html";

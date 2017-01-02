@@ -26,6 +26,7 @@ function RetrieveNote(noteRelativeUrl)
 				return;
 			}
 
+			// I don't know how { decodeEntities : true } works for cheerio!
 			var $ = cheerio.load(body);
 
 			var text = $('body>div').html();
@@ -65,6 +66,7 @@ module.exports = function(file, $, rows, chapterId, db, nextInsert)
 				childElement.name === 'i' ||
 				(childElement.name == 'div' && childElement.attribs !== undefined && childElement.attribs.align !== 'right')
 				) {
+
 				// Estera
 				var text;
 				if (childElement.name == 'div' && childElement.attribs !== undefined && childElement.attribs.align !== 'right') {
@@ -73,6 +75,7 @@ module.exports = function(file, $, rows, chapterId, db, nextInsert)
 				else {
 					text = $(childElement).text().trim();
 				}
+
 				versetTextTokens.push(text);
 			}
 			else {
@@ -115,8 +118,9 @@ module.exports = function(file, $, rows, chapterId, db, nextInsert)
 		versetText = versetTextTokens.join(' ');
 		var verset = new Verset(chapterId, versetNumber, versetText);
 		versets.push(verset);
-
 	}
+
+	debugger;
 
 	var startDb = Date.now();
 
