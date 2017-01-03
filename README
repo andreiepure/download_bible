@@ -12,19 +12,12 @@ locally
 
 4. Run the ParseLocalChapters in order to insert the Chapters data
 
-5. [TODO] Insert the versets, notes and verset links, but I it's too much data for one go.
-	a. Fix the insert problem, currently the DB is overwhelmed, see the log.. :wq
-	 PS D:\programare_atelier\download_bible> node IterateOverChaptersAndInsertVersets.js > Test.log PS D:\programare_atelier\download_bible> node IterateOverChaptersAndInsertVersets.js > Test.log
-	events.js:141
-		  throw er; // Unhandled 'error' event
-	Error: SQLITE_BUSY: database is locked
-		at Error (native)
-
-	HOW TO CATCH THIS? I TRIED BEFORE!... should put the inserts in the try catch as well..
-
-	b. Wait for the previous inserts to finish...
-
-	c. It will take forever...
+5. Run IterateOverChaptersAndInsertVersets in order to:
+- insert the versets in the Versets table
+- insert the notes in the TemporaryNotes table
+- insert the links in the TemporaryLinks table
+The current problem is that the data in the TemporaryNotes is encoded, I might have to redo that,
+and also parse whatever links are present in the temporary notes.
 
 How to debug:
 https://nodejs.org/api/debugger.html
